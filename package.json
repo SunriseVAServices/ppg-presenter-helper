@@ -1,0 +1,37 @@
+{
+  "name": "ppg-presenter-helper",
+  "productName": "PPG Presenter Helper",
+  "version": "1.0.0",
+  "description": "Plays Friday presenters' PowerPoint, Keynote and Canva files on the presentation laptop, controlled from their phones.",
+  "author": "The Professional Playground",
+  "license": "UNLICENSED",
+  "private": true,
+  "main": "src/main.js",
+  "scripts": {
+    "start": "electron .",
+    "dist": "electron-builder --publish never"
+  },
+  "devDependencies": {
+    "electron": "33.2.1",
+    "electron-builder": "25.1.8"
+  },
+  "build": {
+    "appId": "llc.theppg.presenterhelper",
+    "productName": "PPG Presenter Helper",
+    "artifactName": "PPG-Presenter-Helper-${os}.${ext}",
+    "files": ["src/**/*", "package.json"],
+    "directories": { "buildResources": "build", "output": "dist" },
+    "afterPack": "build/after-pack.js",
+    "win": { "target": [{ "target": "nsis", "arch": ["x64"] }], "icon": "build/icon.png" },
+    "nsis": { "oneClick": true, "perMachine": false, "runAfterFinish": true, "createDesktopShortcut": true, "shortcutName": "PPG Presenter Helper" },
+    "mac": {
+      "target": [{ "target": "dmg", "arch": ["universal"] }],
+      "icon": "build/icon.png",
+      "category": "public.app-category.productivity",
+      "identity": null,
+      "extendInfo": {
+        "NSAppleEventsUsageDescription": "PPG Presenter Helper opens presenters' files in Keynote or PowerPoint and moves their slides when they tap Next on their phone."
+      }
+    }
+  }
+}

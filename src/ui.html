@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'unsafe-inline'; style-src 'unsafe-inline'">
+<title>PPG Presenter Helper</title>
+<style>
+:root{--bg:#0A0B0D;--card:#17181B;--line:#2A2C31;--mut:#A1A3A8;--y:#F4EC32;--g:#4ADE80}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:#fff;font:14px/1.5 system-ui,-apple-system,"Segoe UI",sans-serif;-webkit-user-select:none;user-select:none}
+main{padding:24px 22px;display:flex;flex-direction:column;gap:14px;min-height:100vh}
+h1{margin:0;font-size:20px;font-weight:700}
+.eye{font-size:11px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--y)}
+.card{background:var(--card);border-radius:16px;padding:16px;display:flex;flex-direction:column;gap:10px}
+.code{font-size:46px;font-weight:800;letter-spacing:.14em;text-align:center;color:#fff;-webkit-user-select:text;user-select:text}
+p{margin:0;color:#D4D5D8}
+small,.mut{color:var(--mut);font-size:12.5px}
+ol{margin:0;padding-left:18px;color:#D4D5D8}ol li{margin:2px 0}
+.st{display:flex;align-items:center;gap:10px;font-weight:600}
+.st i{width:10px;height:10px;border-radius:50%;background:#6B6E75;flex:none}.st.on i{background:var(--g)}.st.warn i{background:#F59E0B}
+select,input{width:100%;height:40px;border-radius:10px;border:1px solid var(--line);background:#0F1012;color:#fff;font:inherit;padding:0 10px}
+button{height:40px;border-radius:10px;border:0;background:#26282D;color:#fff;font:inherit;font-weight:600;padding:0 14px;cursor:pointer}
+button.y{background:var(--y);color:#0A0B0D}
+button.link{background:none;height:auto;padding:0;color:var(--mut);text-decoration:underline;font-weight:400}
+.row{display:flex;gap:8px;align-items:center}
+label.chk{display:flex;gap:8px;align-items:center;color:#D4D5D8}label.chk input{width:auto;height:auto}
+.err{color:#FCA5A5}
+.foot{margin-top:auto;display:flex;justify-content:space-between;align-items:center}
+[hidden]{display:none!important}
+</style>
+</head>
+<body>
+<main>
+	<h1>PPG Presenter Helper</h1>
+
+	<section id="pair" class="card" hidden>
+		<span class="eye">Connect this computer</span>
+		<div class="code" id="code">— — —</div>
+		<ol>
+			<li>On your phone, open the PPG app › Me › Leadership › <b>Run Friday&rsquo;s presentation</b> (or the Remote on the website).</li>
+			<li>Tap <b>Connect</b> next to &ldquo;Presenter Helper&rdquo; and type this code.</li>
+		</ol>
+		<small>You only do this once. The code changes every 20 minutes.</small>
+		<p class="err" id="perr" hidden></p>
+	</section>
+
+	<section id="conn" class="card" hidden>
+		<div class="st on" id="st"><i></i><span id="stt">Connected</span></div>
+		<p id="what"></p>
+		<small id="err" class="err" hidden></small>
+	</section>
+
+	<section id="opts" class="card" hidden>
+		<span class="eye">Canva shows on</span>
+		<div class="row"><select id="disp"></select><button id="test">Test</button></div>
+		<small>PowerPoint and Keynote use their own setting for which screen shows the slides.</small>
+		<label class="chk"><input type="checkbox" id="login"> Start when this computer starts</label>
+	</section>
+
+	<section id="site" class="card" hidden>
+		<span class="eye">Website</span>
+		<div class="row"><input id="siteurl" spellcheck="false"><button id="siteok">Use</button></div>
+	</section>
+
+	<div class="foot">
+		<small id="ver"></small>
+		<span><button class="link" id="sitebtn">Different website?</button> &nbsp; <button class="link" id="disc" hidden>Disconnect</button></span>
+	</div>
+</main>
+<script>
+const $ = (id) => document.getElementById(id);
+let S = {};
+ppg.on((s) => {
+	S = s;
+	const paired = s.phase === 'connected' || s.phase === 'offline';
+	$('pair').hidden = paired;
+	$('conn').hidden = !paired;
+	$('opts').hidden = !paired;
+	$('disc').hidden = !paired;
+	$('sitebtn').hidden = paired;
+	$('code').textContent = s.code ? s.code.slice(0, 3) + ' ' + s.code.slice(3) : '— — —';
+	$('perr').hidden = !(s.phase === 'revoked' || s.net);
+	$('perr').textContent = s.phase === 'revoked' ? 'This computer was disconnected from the website. Connect it again with the new code.' : (s.net ? 'Can’t reach ' + s.site + '. Check the internet connection.' : '');
+	const st = $('st');
+	st.className = 'st ' + (s.phase === 'offline' ? 'warn' : 'on');
+	$('stt').textContent = s.phase === 'offline' ? 'Can’t reach the website. Trying again…' : 'Connected to ' + (s.siteName || s.site.replace(/^https?:\/\//, ''));
+	const app = { ppt: 'PowerPoint', key: 'Keynote', web: 'Canva' }[s.mode];
+	$('what').textContent = s.mode === 'opening' ? 'Opening ' + (s.title || 'a presentation') + '…' : (s.key && app ? (s.title || 'A presenter') + ' is presenting in ' + app + (s.total ? ' · slide ' + s.slide + ' of ' + s.total : '') : 'Ready. Leave this running. When a presenter with a PowerPoint, Keynote or Canva file starts, it opens here by itself.');
+	$('err').hidden = !s.err;
+	$('err').textContent = s.err ? 'Couldn’t open the last file: ' + s.err + '. They’re on the prepared slides instead.' : '';
+	const d = $('disp');
+	const opts = (s.displays || []).map((x) => '<option value="' + x.id + '"' + (x.id === s.display ? ' selected' : '') + '>' + x.label.replace(/</g, '&lt;') + '</option>').join('');
+	if (d.dataset.v !== opts) { d.innerHTML = opts; d.dataset.v = opts; }
+	$('login').checked = !!s.login;
+	if (document.activeElement !== $('siteurl')) { $('siteurl').value = s.site || ''; }
+	$('ver').textContent = 'Version ' + s.ver + ' · ' + s.name;
+});
+$('disp').onchange = (e) => ppg.send({ do: 'display', v: e.target.value });
+$('test').onclick = () => ppg.send({ do: 'test' });
+$('login').onchange = (e) => ppg.send({ do: 'login', v: e.target.checked });
+$('disc').onclick = () => { if (confirm('Disconnect this computer from the website? You’ll need a new code to connect it again.')) { ppg.send({ do: 'disconnect' }); } };
+$('sitebtn').onclick = () => { $('site').hidden = !$('site').hidden; };
+$('siteok').onclick = () => { ppg.send({ do: 'site', v: $('siteurl').value }); $('site').hidden = true; };
+ppg.send({ do: 'ready' });
+</script>
+</body>
+</html>
